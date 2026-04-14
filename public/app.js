@@ -7,6 +7,7 @@ const planContent = document.getElementById('plan-content');
 const levelsBody = document.querySelector('#levels-table tbody');
 
 const chart = LightweightCharts.createChart(chartEl, {
+  autoSize: true,
   layout: { background: { color: '#0e1117' }, textColor: '#c7c7c7' },
   grid: { vertLines: { color: '#1a1f29' }, horzLines: { color: '#1a1f29' } },
   timeScale: { timeVisible: true, secondsVisible: false, borderColor: '#333' },
@@ -30,25 +31,36 @@ chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
 window.addEventListener('resize', () => chart.resize(chartEl.clientWidth, chartEl.clientHeight));
 
 let priceLines = [];
-function drawLevels(levels) {
+let allLevels = [];
+let lastClose = null;
+
+function drawLevels() {
   for (const pl of priceLines) candleSeries.removePriceLine(pl);
   priceLines = [];
   levelsBody.innerHTML = '';
-  for (const lv of levels) {
-    const line = candleSeries.createPriceLine({
-      price: lv.price,
-      color: lv.bg,
-      lineWidth: 1,
-      lineStyle: LightweightCharts.LineStyle.Solid,
-      axisLabelVisible: true,
-      title: lv.note,
-    });
-    priceLines.push(line);
+  // Only draw levels within +/- 2% of the latest close so they don't blow up the
+  // auto-scaled price range. The full list still shows in the side table.
+  const band = lastClose ? lastClose * 0.02 : Infinity;
+  for (const lv of allLevels) {
+    const inBand = lastClose ? Math.abs(lv.price - lastClose) <= band : true;
+    if (inBand) {
+      const line = candleSeries.createPriceLine({
+        price: lv.price,
+        color: lv.bg,
+        lineWidth: 1,
+        lineStyle: LightweightCharts.LineStyle.Solid,
+        axisLabelVisible: true,
+        title: lv.note,
+      });
+      priceLines.push(line);
+    }
     const tr = document.createElement('tr');
     tr.innerHTML = `<td><span class="level-swatch" style="background:${lv.bg};color:${lv.fg}">${escapeHtml(lv.note)}</span></td><td>${lv.price.toFixed(2)}</td>`;
     levelsBody.appendChild(tr);
   }
 }
+
+function setLevels(levels) { allLevels = levels; drawLevels(); }
 
 function setBars(bars) {
   const candles = bars.map((b) => ({ time: b.time, open: b.open, high: b.high, low: b.low, close: b.close }));
@@ -60,8 +72,12 @@ function setBars(bars) {
   candleSeries.setData(candles);
   volumeSeries.setData(volumes);
   if (bars.length) {
-    symbolEl.textContent = bars[bars.length - 1].symbol;
-    updateLastBar(bars[bars.length - 1]);
+    const last = bars[bars.length - 1];
+    symbolEl.textContent = last.symbol;
+    lastClose = last.close;
+    updateLastBar(last);
+    drawLevels();
+    chart.timeScale().fitContent();
   }
 }
 
@@ -73,7 +89,9 @@ function updateBar(b) {
     color: b.close >= b.open ? 'rgba(38,166,154,0.5)' : 'rgba(239,83,80,0.5)',
   });
   symbolEl.textContent = b.symbol;
+  lastClose = b.close;
   updateLastBar(b);
+  drawLevels();
 }
 
 function updateLastBar(b) {
@@ -118,13 +136,13 @@ function connect() {
   const es = new EventSource('/events');
   es.addEventListener('snapshot', (e) => {
     const { bars, levels } = JSON.parse(e.data);
+    allLevels = levels;
     setBars(bars);
-    drawLevels(levels);
     statusEl.textContent = 'live';
     statusEl.className = 'ok';
   });
   es.addEventListener('bar', (e) => updateBar(JSON.parse(e.data)));
-  es.addEventListener('levels', (e) => drawLevels(JSON.parse(e.data)));
+  es.addEventListener('levels', (e) => setLevels(JSON.parse(e.data)));
   es.addEventListener('plans', () => loadPlanList(planSelect.value));
   es.onerror = () => { statusEl.textContent = 'disconnected'; statusEl.className = 'err'; };
 }

@@ -154,15 +154,20 @@ function loadLevels() {
   try {
     const text = fs.readFileSync(LEVELS_FILE, 'utf8');
     const rows = parse(text, { columns: true, skip_empty_lines: true, trim: true });
+    const sanitizeColor = (c, fallback) => {
+      if (typeof c !== 'string') return fallback;
+      const m = c.trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
+      return m ? `#${m[1]}` : fallback;
+    };
     levels = rows
       .map((r) => ({
         symbol: r['Symbol'],
         price: parseFloat(r['Price Level']),
         note: r['Note'] || '',
-        fg: r['Foreground Color'] || '#FFFFFF',
-        bg: r['Background Color'] || '#3b6b01',
+        fg: sanitizeColor(r['Foreground Color'], '#FFFFFF'),
+        bg: sanitizeColor(r['Background Color'], '#3b6b01'),
       }))
-      .filter((l) => Number.isFinite(l.price));
+      .filter((l) => Number.isFinite(l.price) && l.price > 0);
   } catch (e) {
     console.error('Levels parse failed:', e.message);
     levels = [];
@@ -213,7 +218,7 @@ setInterval(pollMinuteFile, POLL_MS);
 pollMinuteFile();
 
 app.listen(PORT, () => {
-  console.log(`rtl_export_minute running at http://localhost:${PORT}`);
+  console.log(`ESPlanner running at http://localhost:${PORT}`);
   console.log(`  minute file: ${MINUTE_FILE}`);
   console.log(`  levels file: ${LEVELS_FILE}`);
   console.log(`  plans dir:   ${PLANS_DIR}`);

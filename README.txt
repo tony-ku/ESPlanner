@@ -1,5 +1,5 @@
 ================================================================================
-  rtl_export_minute  -  Local ES Futures Minute Monitor
+  ESPlanner  -  Local ES Futures Minute Monitor
 ================================================================================
 
 OVERVIEW
@@ -34,7 +34,7 @@ REQUIREMENTS
 
 QUICK START  (Windows)
 ----------------------
-  1. Open the rtl_export_minute folder.
+  1. Open the ESPlanner folder.
   2. Double-click  start.bat
      - On first run it will run "npm install" (one-time, ~15 seconds).
      - It will launch Chrome to http://localhost:3000 automatically.
@@ -43,7 +43,7 @@ QUICK START  (Windows)
 
 QUICK START  (Manual / Linux)
 -----------------------------
-  1. cd rtl_export_minute
+  1. cd ESPlanner
   2. npm install          (first run only)
   3. npm start
   4. Open http://localhost:3000 in your browser.
