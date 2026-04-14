@@ -48,9 +48,13 @@ function loadSession() {
     if (!text) return;
     const lines = text.split(/\r?\n/);
     for (const line of lines) {
-      const [time, symbol, open, high, low, close, volume, rawTime] = line.split(',');
+      if (!line) continue;
+      const parts = line.split(',');
+      if (parts.length < 7) continue;
+      const [rawTime, symbol, open, high, low, close, volume] = parts;
+      if (!/^\d{1,2}:\d{2}:\d{2}$/.test(rawTime)) continue;
       bars.push({
-        time: parseInt(time, 10),
+        time: rawTimeToEpoch(rawTime),
         symbol,
         open: +open,
         high: +high,
@@ -60,6 +64,8 @@ function loadSession() {
         rawTime,
       });
     }
+    // Enforce strictly increasing time (restart after midnight can cause ties).
+    bars.sort((a, b) => a.time - b.time);
     pruneOld();
     if (bars.length) lastRawTime = bars[bars.length - 1].rawTime;
     console.log(`Loaded ${bars.length} bars from session`);
@@ -69,7 +75,7 @@ function loadSession() {
 }
 
 function appendSession(bar) {
-  const line = `${bar.time},${bar.symbol},${bar.open},${bar.high},${bar.low},${bar.close},${bar.volume},${bar.rawTime}\n`;
+  const line = `${bar.rawTime},${bar.symbol},${bar.open},${bar.high},${bar.low},${bar.close},${bar.volume}\n`;
   fs.appendFile(SESSION_FILE, line, (err) => {
     if (err) console.error('Session append failed:', err.message);
   });
@@ -77,7 +83,7 @@ function appendSession(bar) {
 
 function rewriteSession() {
   const text = bars
-    .map((b) => `${b.time},${b.symbol},${b.open},${b.high},${b.low},${b.close},${b.volume},${b.rawTime}`)
+    .map((b) => `${b.rawTime},${b.symbol},${b.open},${b.high},${b.low},${b.close},${b.volume}`)
     .join('\n');
   fs.writeFile(SESSION_FILE, text ? text + '\n' : '', (err) => {
     if (err) console.error('Session rewrite failed:', err.message);
@@ -111,6 +117,7 @@ function pollMinuteFile() {
     const parts = line.split(',');
     if (parts.length < 7) return;
     const [rawTime, symbol, open, high, low, close, volume] = parts;
+    if (!/^\d{1,2}:\d{2}:\d{2}$/.test(rawTime)) return; // skip malformed/partial rows
     if (rawTime === lastRawTime) return;
 
     const bar = {

@@ -14,12 +14,60 @@ const tileProbSub = document.getElementById('tile-prob-sub');
 const tileNear = document.getElementById('tile-near');
 const tileNearDist = document.getElementById('tile-near-dist');
 const tileVa = document.getElementById('tile-va');
+const sessionBadge = document.getElementById('session-badge');
+
+// ---------- Session (Central Time) ----------
+// Day (RTH): 08:30 – 16:00 CT
+// Evening / Overnight (ON): 17:00 – 08:29 CT (next day)
+// Closed (maintenance break): 16:00 – 17:00 CT
+function sessionForEpoch(epochSec) {
+  const hm = ctFormat(CT_HM, epochSec);
+  const [hh, mm] = hm.split(':').map((n) => parseInt(n, 10));
+  const mins = hh * 60 + mm;
+  if (mins >= 8 * 60 + 30 && mins < 16 * 60)  return { key: 'rth',    label: 'RTH · Day Session' };
+  if (mins >= 16 * 60        && mins < 17 * 60) return { key: 'closed', label: 'Closed · Globex Break' };
+  return { key: 'on', label: 'ON · Evening / Overnight' };
+}
+function updateSessionBadge(epochSec) {
+  if (!sessionBadge) return;
+  if (!Number.isFinite(epochSec)) {
+    sessionBadge.className = 'session-unknown';
+    sessionBadge.textContent = '—';
+    return;
+  }
+  const s = sessionForEpoch(epochSec);
+  sessionBadge.className = 'session-' + s.key;
+  sessionBadge.textContent = s.label;
+}
+
+const CT_HMS = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/Chicago', hour12: false,
+  hour: '2-digit', minute: '2-digit', second: '2-digit',
+});
+const CT_HM = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/Chicago', hour12: false,
+  hour: '2-digit', minute: '2-digit',
+});
+function ctFormat(fmt, epochSec) {
+  const parts = fmt.formatToParts(new Date(epochSec * 1000));
+  const get = (t) => (parts.find((p) => p.type === t) || {}).value || '00';
+  const hh = get('hour') === '24' ? '00' : get('hour');
+  return fmt === CT_HMS ? `${hh}:${get('minute')}:${get('second')}` : `${hh}:${get('minute')}`;
+}
 
 const chart = LightweightCharts.createChart(chartEl, {
   autoSize: true,
   layout: { background: { color: '#150a24' }, textColor: '#c9a0ff' },
   grid: { vertLines: { color: '#2a163f' }, horzLines: { color: '#2a163f' } },
-  timeScale: { timeVisible: true, secondsVisible: false, borderColor: '#4a2352' },
+  timeScale: {
+    timeVisible: true,
+    secondsVisible: true,
+    borderColor: '#4a2352',
+    tickMarkFormatter: (time) => ctFormat(CT_HM, time),
+  },
+  localization: {
+    timeFormatter: (time) => ctFormat(CT_HMS, time),
+  },
   rightPriceScale: { borderColor: '#4a2352' },
   crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
 });
@@ -170,6 +218,7 @@ function setBars(newBars) {
     symbolEl.textContent = last.symbol;
     lastClose = last.close;
     updateLastBar(last);
+    updateSessionBadge(last.time);
     drawLevels();
     updateTiles();
     chart.timeScale().fitContent();
@@ -189,6 +238,7 @@ function updateBar(b) {
   symbolEl.textContent = b.symbol;
   lastClose = b.close;
   updateLastBar(b);
+  updateSessionBadge(b.time);
   drawLevels();
   updateTiles();
 }
