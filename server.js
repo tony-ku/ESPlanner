@@ -33,7 +33,7 @@ app.get('/events', (req, res) => {
   res.flushHeaders();
   clients.add(res);
   // Prime the new client with current state
-  res.write(`event: snapshot\ndata: ${JSON.stringify({ bars, levels })}\n\n`);
+  res.write(`event: snapshot\ndata: ${JSON.stringify({ bars, levels, planStats: planStatsFor(todaysPlanName()) })}\n\n`);
   req.on('close', () => clients.delete(res));
 });
 
@@ -184,6 +184,72 @@ function listPlans() {
     .reverse();
 }
 
+// Scan a plan's markdown tables for rows like:
+//   | 1 | IBH or IBL | 98.1% | (465) | IBH 6861.50 / IBL 6826.50 |
+// Return every probability entry found, each with {label, pct, prices[]}.
+function extractProbabilities(md) {
+  const out = [];
+  const seen = new Set();
+  const lines = md.split(/\r?\n/);
+  for (const line of lines) {
+    if (!line.includes('|') || !line.includes('%')) continue;
+    const cells = line.split('|').map((c) => c.trim());
+    // Drop empty outer cells from leading/trailing |
+    if (cells.length && cells[0] === '') cells.shift();
+    if (cells.length && cells[cells.length - 1] === '') cells.pop();
+
+    let pctIdx = -1, pct = null;
+    for (let i = 0; i < cells.length; i++) {
+      const m = cells[i].match(/^(\d+(?:\.\d+)?)\s*%$/);
+      if (m) { pct = parseFloat(m[1]); pctIdx = i; break; }
+    }
+    if (pct === null || pctIdx <= 0) continue;
+
+    let label = null;
+    for (let j = pctIdx - 1; j >= 0; j--) {
+      const c = cells[j].replace(/`/g, '').trim();
+      if (c && !/^\d+$/.test(c)) { label = c; break; }
+    }
+    if (!label) continue;
+
+    // Any cells to the right may carry reference prices, e.g. "IBH 6861.50 / IBL 6826.50".
+    const prices = [];
+    for (let k = pctIdx + 1; k < cells.length; k++) {
+      const matches = cells[k].match(/\d{3,5}(?:\.\d+)?/g);
+      if (matches) for (const s of matches) {
+        const v = parseFloat(s);
+        if (Number.isFinite(v) && v > 100) prices.push(v);
+      }
+    }
+
+    const key = `${label}|${pct}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ label, pct, prices });
+  }
+  return out;
+}
+
+function planStatsFor(name) {
+  if (!PLANS_DIR || !name) return null;
+  const p = path.join(PLANS_DIR, name);
+  if (!fs.existsSync(p)) return null;
+  try {
+    const md = fs.readFileSync(p, 'utf8');
+    const probabilities = extractProbabilities(md);
+    return { name, probabilities };
+  } catch {
+    return null;
+  }
+}
+
+function todaysPlanName() {
+  const files = listPlans();
+  const today = new Date().toISOString().slice(0, 10);
+  const todayFile = `trading-plan-${today}.md`;
+  return files.includes(todayFile) ? todayFile : files[0] || null;
+}
+
 app.get('/api/plans', (req, res) => {
   res.json({ files: listPlans() });
 });
@@ -210,7 +276,10 @@ if (LEVELS_FILE) {
 
 if (PLANS_DIR) {
   chokidar.watch(PLANS_DIR, { ignoreInitial: true, awaitWriteFinish: { stabilityThreshold: 200 } })
-    .on('all', () => broadcast('plans', { files: listPlans() }));
+    .on('all', () => {
+      broadcast('plans', { files: listPlans() });
+      broadcast('plan-stats', planStatsFor(todaysPlanName()));
+    });
 }
 
 loadSession();
