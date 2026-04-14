@@ -1,0 +1,34 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; font-family: -apple-system, Segoe UI, Roboto, sans-serif; background: #0e1117; color: #e6e6e6; }
+header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; border-bottom: 1px solid #222; }
+header h1 { font-size: 16px; margin: 0; font-weight: 500; }
+#status { font-size: 12px; color: #888; }
+#status.ok { color: #4caf50; }
+#status.err { color: #f44336; }
+
+main { display: grid; grid-template-columns: 1fr 380px; height: calc(100vh - 41px); }
+
+#chart-pane { position: relative; border-right: 1px solid #222; display: flex; flex-direction: column; }
+#chart { flex: 1; }
+#last-bar { padding: 6px 12px; font-size: 12px; color: #aaa; border-top: 1px solid #222; font-family: ui-monospace, Consolas, monospace; }
+
+#side-pane { display: flex; flex-direction: column; overflow: hidden; }
+#plans-section, #levels-section { padding: 10px 14px; overflow: auto; }
+#plans-section { flex: 2; border-bottom: 1px solid #222; }
+#levels-section { flex: 1; }
+
+.section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+h2 { font-size: 13px; margin: 0; color: #bbb; text-transform: uppercase; letter-spacing: 0.05em; }
+select { background: #1a1f29; color: #e6e6e6; border: 1px solid #333; padding: 2px 6px; font-size: 12px; }
+
+#plan-content { font-size: 13px; line-height: 1.5; }
+#plan-content h1, #plan-content h2, #plan-content h3 { color: #fff; }
+#plan-content code { background: #1a1f29; padding: 1px 4px; border-radius: 3px; }
+#plan-content pre { background: #1a1f29; padding: 8px; overflow: auto; border-radius: 4px; }
+#plan-content table { border-collapse: collapse; }
+#plan-content th, #plan-content td { border: 1px solid #333; padding: 4px 8px; }
+
+#levels-table { width: 100%; font-size: 12px; border-collapse: collapse; }
+#levels-table th, #levels-table td { padding: 3px 6px; text-align: left; border-bottom: 1px solid #222; }
+#levels-table th { color: #888; font-weight: normal; }
+.level-swatch { display: inline-block; padding: 1px 6px; border-radius: 2px; font-size: 11px; }

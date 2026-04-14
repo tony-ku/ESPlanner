@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>ES Futures Minute Monitor</title>
+<link rel="stylesheet" href="style.css" />
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+</head>
+<body>
+  <header>
+    <h1>ES Futures &mdash; <span id="symbol">&mdash;</span></h1>
+    <div id="status">connecting&hellip;</div>
+  </header>
+
+  <main>
+    <section id="chart-pane">
+      <div id="chart"></div>
+      <div id="last-bar"></div>
+    </section>
+
+    <aside id="side-pane">
+      <section id="plans-section">
+        <div class="section-head">
+          <h2>Trading Plan</h2>
+          <select id="plan-select"></select>
+        </div>
+        <div id="plan-content">Loading&hellip;</div>
+      </section>
+
+      <section id="levels-section">
+        <h2>Price Levels</h2>
+        <table id="levels-table">
+          <thead><tr><th>Note</th><th>Price</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </section>
+    </aside>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+node_modules/
+session_bars.csv
+.env
+.claude/
