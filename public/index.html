@@ -12,30 +12,56 @@
     <div id="status">connecting&hellip;</div>
   </header>
 
+  <div id="tiles">
+    <div class="tile tile-price">
+      <div class="tile-label">Last Price</div>
+      <div id="tile-last" class="tile-value big">&mdash;</div>
+      <div id="tile-change" class="tile-sub">&mdash;</div>
+    </div>
+    <div class="tile">
+      <div class="tile-label">Session O / H / L</div>
+      <div id="tile-ohl" class="tile-value">&mdash;</div>
+      <div id="tile-range" class="tile-sub">Range &mdash;</div>
+    </div>
+    <div class="tile">
+      <div class="tile-label">Volume (session)</div>
+      <div id="tile-vol" class="tile-value">&mdash;</div>
+      <div id="tile-bars" class="tile-sub">&mdash; bars</div>
+    </div>
+    <div class="tile">
+      <div class="tile-label">Nearest Level</div>
+      <div id="tile-near" class="tile-value">&mdash;</div>
+      <div id="tile-near-dist" class="tile-sub">&mdash;</div>
+    </div>
+    <div class="tile">
+      <div class="tile-label">Value Area</div>
+      <div id="tile-va" class="tile-value small">&mdash;</div>
+    </div>
+  </div>
+
   <main>
     <section id="chart-pane">
       <div id="chart"></div>
       <div id="last-bar"></div>
     </section>
-
-    <aside id="side-pane">
-      <section id="plans-section">
-        <div class="section-head">
-          <h2>Trading Plan</h2>
-          <select id="plan-select"></select>
-        </div>
-        <div id="plan-content">Loading&hellip;</div>
-      </section>
-
-      <section id="levels-section">
-        <h2>Price Levels</h2>
-        <table id="levels-table">
-          <thead><tr><th>Note</th><th>Price</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </section>
+    <div id="split-v" class="split split-v" title="Drag to resize"></div>
+    <aside id="plan-pane">
+      <div class="section-head">
+        <h2>Trading Plan</h2>
+        <select id="plan-select"></select>
+      </div>
+      <div id="plan-content">Loading&hellip;</div>
     </aside>
   </main>
+
+  <div id="split-h" class="split split-h" title="Drag to resize"></div>
+
+  <section id="levels-grid">
+    <div class="lv-group"><h3>Value Area</h3><table data-group="va"></table></div>
+    <div class="lv-group"><h3>Intraday</h3><table data-group="intraday"></table></div>
+    <div class="lv-group"><h3>Reference</h3><table data-group="reference"></table></div>
+    <div class="lv-group"><h3>Prior Day / Week</h3><table data-group="prior"></table></div>
+  </section>
 
   <script src="app.js"></script>
 </body>

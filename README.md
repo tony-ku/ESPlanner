@@ -1,212 +1,296 @@
-================================================================================
-  ESPlanner  -  Local ES Futures Minute Monitor
-================================================================================
+# ESPlanner
 
-OVERVIEW
---------
-A small local web application that reads three live file sources from your PC
-and displays them together in a browser:
+**ESPlanner** is a small local web app that gives you a single dashboard for trading ES futures:
 
-  1. A one-minute OHLCV bar file for ES futures that is continuously overwritten
-     with the latest minute's data. The app polls this file, accumulates a
-     rolling history in memory (and on disk), and renders a candlestick chart.
+- A live **candlestick chart** built from a one-minute OHLCV file that your data feed overwrites each minute.
+- **Price levels** (VAH, VAL, POC, IB, prior day / week, etc.) pulled from a Sierra Chart notification CSV, drawn as horizontal lines on the chart and listed in grouped tables.
+- Your **dated markdown trading plans**, rendered side-by-side with the chart so you can glance at your game plan without tabbing away.
+- A row of summary **tiles** up top: last price, session O/H/L, range, session volume, nearest level, and value area.
 
-  2. A Sierra Chart-style "notification CSV" of price levels (VAH, VAL, POC,
-     key lines, etc.). The app draws each level as a horizontal line on the
-     chart, colored with the colors from the CSV, and lists them in a side
-     panel.
+Everything runs locally — no cloud, no account, no data leaves your machine. A tiny Node server reads your files and pushes updates to a browser tab over Server-Sent Events.
 
-  3. A directory of daily trading plans written in Markdown. Today's plan is
-     auto-selected; a dropdown lets you browse older plans.
+---
 
-All three sources update live: polled or watched by the server, and pushed to
-the browser over Server-Sent Events (SSE). No reload is needed.
+## Screenshot layout
 
---------------------------------------------------------------------------------
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│ ESPLANNER — ESM6                                          live       │
+├──────────────────────────────────────────────────────────────────────┤
+│ Last Price │ Session O/H/L │ Volume │ Nearest Level │ Value Area     │
+├──────────────────────────────────────────────┬───────────────────────┤
+│                                              │                       │
+│              Candlestick chart               │    Trading Plan       │
+│           (with horizontal levels)           │    (today's .md)      │
+│                                              │                       │
+├──────────────────────────────────────────────┴───────────────────────┤
+│   Value Area   │   Intraday   │   Reference   │   Prior Day/Week     │
+└──────────────────────────────────────────────────────────────────────┘
+```
 
-REQUIREMENTS
-------------
-  * Windows (tested) or Linux
-  * Node.js 18 or newer  (https://nodejs.org)
-  * A modern Chromium-based browser (Chrome, Edge)
+---
 
---------------------------------------------------------------------------------
+## Requirements
 
-QUICK START  (Windows)
-----------------------
-  1. Open the ESPlanner folder.
-  2. Double-click  start.bat
-     - On first run it will run "npm install" (one-time, ~15 seconds).
-     - It will launch Chrome to http://localhost:3000 automatically.
-     - A console window stays open showing server logs. Closing it stops
-       the server.
+| | |
+|---|---|
+| **OS** | Windows 10/11 (tested). Linux should work with `npm start`. |
+| **Node.js** | 18 or newer. Download from [nodejs.org](https://nodejs.org) (pick the **LTS** installer). |
+| **Browser** | Any modern Chromium-based browser (Chrome, Edge, Brave). |
 
-QUICK START  (Manual / Linux)
------------------------------
-  1. cd ESPlanner
-  2. npm install          (first run only)
-  3. npm start
-  4. Open http://localhost:3000 in your browser.
+After installing Node, open a **new** terminal and confirm:
 
---------------------------------------------------------------------------------
+```bash
+node --version
+npm --version
+```
 
-CONFIGURATION  (.env)
----------------------
-All paths and tuning parameters live in a file called  .env  in the project
-root. An example file is provided as .env.example. Edit .env to point to your
-data locations.
+Both should print a version number.
 
-  PORT             HTTP port for the local server. Default 3000.
+---
 
-  MINUTE_FILE      Full path to the one-minute OHLCV file.
-                   This file is expected to be OVERWRITTEN each minute with a
-                   single line in the format:
-                       Time,Symbol,Open,High,Low,Close,Volume
-                   Example line:
-                       15:14:03,ESM6,7002,7003,7002,7002.5,966
-                   The server polls this file (see POLL_MS) and appends each
-                   new, unique row to its in-memory bar history.
+## Quick start (Windows — easiest)
 
-  LEVELS_FILE      Full path to the price-levels CSV. The header row must
-                   include at least these columns:
-                       Symbol, Price Level, Note,
-                       Foreground Color, Background Color
-                   This is the standard Sierra Chart notification export.
-                   The file is watched for changes; saves are reflected
-                   instantly on the chart.
+1. Open the `ESPlanner` folder in File Explorer.
+2. Copy `.env.example` to `.env` and edit the paths inside to point at your own data files (see [Configuration](#configuration) below).
+3. Double-click **`start.bat`**.
+   - First run: it will `npm install` the dependencies (~15 seconds).
+   - It launches the server and auto-opens Chrome to `http://localhost:3000`.
+   - Keep the console window open — closing it stops the server.
 
-  PLANS_DIR        Full path to a directory of markdown trading plans.
-                   Files should be named:
-                       trading-plan-YYYY-MM-DD.md
-                   The file matching today's date is selected automatically.
-                   All .md files in the folder appear in the dropdown,
-                   sorted newest first.
+## Quick start (manual / Linux)
 
-  POLL_MS          How often (milliseconds) to re-read MINUTE_FILE.
-                   Default 1000 (once per second).
+```bash
+cd ESPlanner
+cp .env.example .env          # then edit .env
+npm install                   # first run only
+npm start
+```
 
-  HISTORY_DAYS     Rolling chart window in days. Bars older than this
-                   (relative to the newest bar) are dropped from the chart
-                   and the session file. Default 2.
+Then open [http://localhost:3000](http://localhost:3000) in your browser.
 
-  SESSION_FILE     Where to persist accumulated bars so a browser reload or
-                   a server restart does not lose the day's chart.
-                   Default  ./session_bars.csv  (inside the project folder).
+---
 
-Paths on Windows: forward slashes work best (e.g. C:/Users/tonyk/...).
-Backslashes also work but remember that a .env file is not a shell script.
+## Configuration
 
---------------------------------------------------------------------------------
+All settings live in a `.env` file in the project root. Copy `.env.example` to `.env` and edit the values.
 
-WHAT YOU SEE IN THE BROWSER
----------------------------
-  Header
-    - Contract symbol (parsed from each bar, e.g. ESM6).
-    - Connection status: "live" in green when SSE is connected,
-      "disconnected" in red otherwise.
+| Key | What it does | Default |
+|---|---|---|
+| `PORT` | HTTP port for the local server. | `3000` |
+| `MINUTE_FILE` | Full path to the one-minute OHLCV file (overwritten each minute with a single row). | *(required)* |
+| `LEVELS_FILE` | Full path to the Sierra Chart notification CSV of price levels. | *(required)* |
+| `PLANS_DIR` | Directory containing dated markdown trading plans. | *(required)* |
+| `POLL_MS` | How often to re-read `MINUTE_FILE` (milliseconds). | `1000` |
+| `HISTORY_DAYS` | Rolling chart window in days. Bars older than this are dropped. | `2` |
+| `SESSION_FILE` | Where to persist observed bars so reloads don't lose context. | `./session_bars.csv` |
 
-  Left pane - Chart
-    - Candlestick series with volume histogram below.
-    - Horizontal price lines drawn from LEVELS_FILE, colored by that CSV's
-      Background Color. The Note column is used as the axis label.
-    - The footer under the chart shows the most recent raw bar:
-          15:14:03  O 7002  H 7003  L 7002  C 7002.5  V 966
+> **Path tip (Windows):** forward slashes work cleanly in `.env` files. Use
+> `C:/Users/you/data/...` rather than `C:\Users\you\data\...`.
 
-  Right pane - Trading Plan
-    - Dropdown listing all .md files in PLANS_DIR (newest first).
-    - Selected plan rendered as HTML.
-    - Updates automatically if files are added, edited, or removed.
+### `MINUTE_FILE` format
 
-  Right pane - Price Levels
-    - Tabular listing of every level in LEVELS_FILE with its note swatch
-      and price.
+The file is expected to be **overwritten** each minute with a single row:
 
---------------------------------------------------------------------------------
+```
+Time,Symbol,Open,High,Low,Close,Volume
+```
 
-HOW IT WORKS (internals)
-------------------------
-  server.js
-    - Express serves the static UI from the public/ folder.
-    - setInterval polls MINUTE_FILE every POLL_MS. A new bar is detected by
-      comparing the Time column to the previously observed one.
-    - Each observed bar is appended to SESSION_FILE (append-only fast path);
-      pruning past HISTORY_DAYS triggers a full rewrite.
-    - chokidar watches LEVELS_FILE and PLANS_DIR. On change, the new data
-      is pushed to all connected browsers via SSE.
-    - /events   Server-Sent Events stream (snapshot, bar, levels, plans).
-    - /api/plans        lists plan filenames.
-    - /api/plans/:name  returns a markdown plan rendered to HTML.
+Example row:
 
-  public/app.js
-    - Opens an EventSource to /events.
-    - On "snapshot" it paints the full bar history and levels.
-    - On "bar" it calls candleSeries.update() for a smooth live update.
-    - On "levels" it clears and redraws price lines.
-    - On "plans" it refreshes the dropdown.
+```
+15:14:03,ESM6,7002,7003,7002,7002.5,966
+```
 
-  Charting library
-    - TradingView Lightweight Charts v4.1.3, loaded via unpkg CDN
-      (requires internet on first load; it is cached by the browser after).
+The server polls this file every `POLL_MS`, deduplicates by `Time`, and appends each new bar to an in-memory history (and to `SESSION_FILE` on disk).
 
---------------------------------------------------------------------------------
+### `LEVELS_FILE` format
 
-TIME HANDLING
--------------
-The minute file contains time of day only ("15:14:03"), no date.
-The server interprets each time as "today" in the server's local timezone.
-If the parsed time would be more than 12 hours in the future versus now
-(e.g. it is 00:05 local and the file still reads 23:59), the time is rolled
-back by one day so overnight ticks land on the correct calendar date.
-Restarting the server after midnight will anchor new bars to the new date.
+A Sierra Chart notification-style CSV. The header row must include at least:
 
---------------------------------------------------------------------------------
+```
+Symbol,Price Level,Note,Foreground Color,Background Color
+```
 
-SESSION PERSISTENCE
--------------------
-Bars observed during a running session are appended to SESSION_FILE so that
-refreshing the browser or restarting the server does not lose the chart.
-Safe to delete the file at any time; a fresh session starts on the next bar.
+- `Note` is used as the chart-axis label (e.g. `VAH`, `VAL`, `POC`, `IBH`, `pVAH`).
+- `Background Color` becomes the line color on the chart (hex, e.g. `#3b6b01`).
+- Rows with `Price Level = 0` are ignored. Malformed hex colors (e.g. `#0000000`) fall back to a default.
 
---------------------------------------------------------------------------------
+Levels update instantly when you save the CSV — no refresh needed.
 
-TROUBLESHOOTING
----------------
-  Page loads but status shows "disconnected":
-    The Node server is not running, or a firewall is blocking localhost:3000.
-    Check the console for errors and confirm the port in .env.
+### `PLANS_DIR` format
 
-  Chart is empty:
-    - Confirm MINUTE_FILE path in .env points to the right file.
-    - Confirm the file is actually being written (open it in Notepad++; it
-      should change each minute).
-    - Look at the server console - file-read errors are logged.
+A directory of markdown files. To be auto-selected as *today's plan*, a file must be named:
 
-  "Levels" section is empty:
-    - Confirm LEVELS_FILE path and that its header row matches the expected
-      column names.
+```
+trading-plan-YYYY-MM-DD.md
+```
 
-  "No trading plans found":
-    - Confirm PLANS_DIR path and that it contains *.md files.
+Any `.md` file in the folder appears in the dropdown, sorted newest first.
 
-  Bar "jumps" to a wrong time after midnight:
-    Restart the server. See TIME HANDLING above.
+---
 
-  Want to reset accumulated history:
-    Stop the server, delete session_bars.csv, restart.
+## What the UI shows
 
---------------------------------------------------------------------------------
+### Top tiles
 
-FILES IN THIS PROJECT
----------------------
-  package.json          npm manifest and dependencies
-  server.js             Express server, file polling/watching, SSE broadcaster
-  public/index.html     Page layout
-  public/app.js         Chart and SSE client
-  public/style.css      Dark theme styling
-  .env                  Your configuration (edit to match your paths)
-  .env.example          Template showing all supported keys
-  start.bat             Windows one-click launcher (installs, runs, opens Chrome)
-  session_bars.csv      Auto-generated at runtime. Accumulated bar history.
-  README.txt            This file.
+| Tile | Shows |
+|---|---|
+| **Last Price** | Most recent close. Green if up vs. session open, pink if down. Change in absolute price and percent below. |
+| **Session O / H / L** | Session open (first bar's open), session high, session low. Range below. |
+| **Volume (session)** | Cumulative volume across all bars in the current session, plus bar count. |
+| **Nearest Level** | The level (by price) closest to the current price, with the signed distance. |
+| **Value Area** | VAH, POC, VAL side-by-side (from `LEVELS_FILE`). |
 
-================================================================================
+### Chart
+
+- Candlesticks + volume histogram.
+- Horizontal lines for any level within ±2% of the current price, colored from `LEVELS_FILE`. The ±2% filter prevents distant levels from squashing the auto-scale.
+- Bottom strip shows the raw last bar: `15:14:03  O 7002  H 7003  L 7002  C 7002.5  V 966`.
+
+### Trading plan
+
+- Dropdown selects which plan to view. Today's is picked automatically if it exists.
+- Full markdown rendering (headers, lists, tables, code blocks, blockquotes).
+- Re-renders automatically when you save the file.
+
+### Level tables (bottom)
+
+Levels from `LEVELS_FILE` are grouped by their `Note` into four panels:
+
+| Panel | Notes matched |
+|---|---|
+| **Value Area** | `VAH`, `VAL`, `POC` |
+| **Intraday** | `IBH`, `IBL`, `IBH30`, `IBL30`, `2xIBH`, `2xIBL`, `rthOP` |
+| **Reference** | `rthHI`, `rthLO`, `ethHI`, `ethLO`, `ethMID`, `onVPOC` |
+| **Prior Day / Week** | `pVAH`, `pVAL`, `yVPOC`, `yHI`, `yLO`, `pCL`, `pWHI`, `pWLO` |
+
+The row matching the *nearest level* is highlighted in amber.
+
+`HVN` and `LVN` levels are drawn on the chart but do not have their own tables.
+
+---
+
+## How it works (internals)
+
+### Server (`server.js`)
+- Express serves the static UI from `public/`.
+- `setInterval` polls `MINUTE_FILE` every `POLL_MS`. A row is considered new if its `Time` column differs from the last one seen.
+- Each new bar is appended to `SESSION_FILE` (fast append) and to the in-memory bar list. When bars age past `HISTORY_DAYS`, the session file is fully rewritten.
+- `chokidar` watches `LEVELS_FILE` and `PLANS_DIR`. On change, updates push to all connected browsers via SSE.
+- Endpoints:
+  - `GET /events` — Server-Sent Events stream (`snapshot`, `bar`, `levels`, `plans`).
+  - `GET /api/plans` — list of plan filenames.
+  - `GET /api/plans/:name` — one plan rendered to HTML.
+
+### Frontend (`public/app.js`)
+- Opens an `EventSource` to `/events`.
+- On `snapshot`: paints the full bar history and levels.
+- On `bar`: calls `candleSeries.update()` for a smooth live tick.
+- On `levels`: re-categorizes and redraws price lines and tables.
+- On `plans`: refreshes the dropdown.
+
+### Charting library
+TradingView [Lightweight Charts](https://github.com/tradingview/lightweight-charts) v4.1.3, loaded via `unpkg` CDN. Requires internet access on first load; your browser caches it after that.
+
+---
+
+## Time handling
+
+`MINUTE_FILE` contains **time of day only** (`"15:14:03"`), no date. The server interprets each time as *today* in the server's local timezone. If the parsed time would be more than 12 hours in the future versus now (e.g. it's 00:05 local and the file still shows 23:59), the time rolls back one day so overnight ticks land on the correct calendar date.
+
+**Tip:** restart the server after midnight to anchor new bars to the new date cleanly.
+
+---
+
+## Session persistence
+
+Observed bars are appended to `SESSION_FILE` (default: `session_bars.csv` in the project folder) so that:
+
+- Refreshing the browser doesn't clear the chart.
+- Restarting the server doesn't clear the chart.
+
+Safe to delete the file at any time — a fresh session starts on the next bar.
+
+---
+
+## Troubleshooting
+
+<details>
+<summary><strong>The page loads but status shows "disconnected"</strong></summary>
+
+- The Node server isn't running, or a firewall is blocking `localhost:3000`.
+- Check the console window from `start.bat` for errors.
+- Confirm the `PORT` in `.env` matches what you're opening in the browser.
+</details>
+
+<details>
+<summary><strong>Chart is empty</strong></summary>
+
+- Confirm `MINUTE_FILE` in `.env` points at the right file.
+- Open that file in Notepad and verify it contains one line in `Time,Symbol,O,H,L,C,V` format.
+- Confirm the file is actually being written — its timestamp should change each minute.
+- Check the server console for file-read errors.
+</details>
+
+<details>
+<summary><strong>Level panels are empty</strong></summary>
+
+- Confirm `LEVELS_FILE` path in `.env`.
+- Verify the CSV has a header row with at least `Symbol, Price Level, Note, Foreground Color, Background Color`.
+- Rows with price 0 are intentionally skipped.
+</details>
+
+<details>
+<summary><strong>"No trading plans found"</strong></summary>
+
+- Confirm `PLANS_DIR` path in `.env`.
+- Make sure the directory contains at least one `.md` file.
+- For today's plan to auto-select, name it `trading-plan-YYYY-MM-DD.md`.
+</details>
+
+<details>
+<summary><strong>Bar times look wrong after midnight</strong></summary>
+
+Restart the server. See [Time handling](#time-handling) for why.
+</details>
+
+<details>
+<summary><strong>I want to reset all accumulated history</strong></summary>
+
+1. Stop the server (close the console window).
+2. Delete `session_bars.csv`.
+3. Restart.
+</details>
+
+<details>
+<summary><strong>Error in browser console: "Cannot parse color: #XXXXXXX"</strong></summary>
+
+A row in `LEVELS_FILE` has a malformed hex color. The server now falls back to a default, but fixing the CSV is cleaner. Valid formats are `#RGB`, `#RRGGBB`, and `#RRGGBBAA`.
+</details>
+
+---
+
+## File map
+
+```
+ESPlanner/
+├── .env.example        Template — copy to .env and edit
+├── .gitignore
+├── package.json        npm manifest and dependencies
+├── package-lock.json   Pinned dependency tree
+├── README.md           This file
+├── server.js           Express server, file polling/watching, SSE broadcaster
+├── start.bat           Windows one-click launcher
+├── public/
+│   ├── index.html      Page layout
+│   ├── app.js          Chart + SSE client + tile/table rendering
+│   └── style.css       Dark purple theme
+└── session_bars.csv    Auto-generated. Accumulated bar history. Safe to delete.
+```
+
+---
+
+## License
+
+Personal use. Use at your own risk — this is a tool for viewing your own local files, not trading advice.
