@@ -17,15 +17,16 @@ Everything runs locally — no cloud, no account, no data leaves your machine. A
 ┌──────────────────────────────────────────────────────────────────────┐
 │ ESPLANNER — ESM6                                          live       │
 ├──────────────────────────────────────────────────────────────────────┤
-│ Last Price │ Session O/H/L │ Volume │ Nearest Level │ Value Area     │
+│ Last Price │ Session O/H/L │ Top Prob @Price │ Nearest Level │ VA    │
 ├──────────────────────────────────────────────┬───────────────────────┤
 │                                              │                       │
 │              Candlestick chart               │    Trading Plan       │
 │           (with horizontal levels)           │    (today's .md)      │
 │                                              │                       │
-├──────────────────────────────────────────────┴───────────────────────┤
-│   Value Area   │   Intraday   │   Reference   │   Prior Day/Week     │
-└──────────────────────────────────────────────────────────────────────┘
+├─────────────────────┬─────────────┬──────────┴──────┬────────────────┤
+│  Top Probabilities  │  Intraday   │   Reference     │ Prior Day/Week │
+│   (from plan .md)   │             │                 │                │
+└─────────────────────┴─────────────┴─────────────────┴────────────────┘
 ```
 
 ---
@@ -138,7 +139,7 @@ Any `.md` file in the folder appears in the dropdown, sorted newest first.
 |---|---|
 | **Last Price** | Most recent close. Green if up vs. session open, pink if down. Change in absolute price and percent below. |
 | **Session O / H / L** | Session open (first bar's open), session high, session low. Range below. |
-| **Volume (session)** | Cumulative volume across all bars in the current session, plus bar count. |
+| **Top Prob · Near Price** | Highest-probability row from today's plan whose reference level is within ±15 points of the current price. Falls back to overall top if nothing is in band. |
 | **Nearest Level** | The level (by price) closest to the current price, with the signed distance. |
 | **Value Area** | VAH, POC, VAL side-by-side (from `LEVELS_FILE`). |
 
@@ -156,18 +157,18 @@ Any `.md` file in the folder appears in the dropdown, sorted newest first.
 
 ### Level tables (bottom)
 
-Levels from `LEVELS_FILE` are grouped by their `Note` into four panels:
+The four panels across the bottom:
 
-| Panel | Notes matched |
-|---|---|
-| **Value Area** | `VAH`, `VAL`, `POC` |
-| **Intraday** | `IBH`, `IBL`, `IBH30`, `IBL30`, `2xIBH`, `2xIBL`, `rthOP` |
-| **Reference** | `rthHI`, `rthLO`, `ethHI`, `ethLO`, `ethMID`, `onVPOC` |
-| **Prior Day / Week** | `pVAH`, `pVAL`, `yVPOC`, `yHI`, `yLO`, `pCL`, `pWHI`, `pWLO` |
+| Panel | Source | Contents |
+|---|---|---|
+| **Top Probabilities** | `PLANS_DIR` (today's plan .md) | Top 6 rows by `%` parsed from the plan's probability tables, with reference price(s) in muted text. Updates live when the plan file is rewritten. |
+| **Intraday** | `LEVELS_FILE` | `IBH`, `IBL`, `IBH30`, `IBL30`, `2xIBH`, `2xIBL`, `rthOP` |
+| **Reference** | `LEVELS_FILE` | `rthHI`, `rthLO`, `ethHI`, `ethLO`, `ethMID`, `onVPOC` |
+| **Prior Day / Week** | `LEVELS_FILE` | `pVAH`, `pVAL`, `yVPOC`, `yHI`, `yLO`, `pCL`, `pWHI`, `pWLO` |
 
-The row matching the *nearest level* is highlighted in amber.
+The level row matching the *nearest level* is highlighted in amber.
 
-`HVN` and `LVN` levels are drawn on the chart but do not have their own tables.
+`VAH`, `VAL`, `POC` still appear in the **Value Area** tile and are drawn on the chart, but no longer have their own panel. `HVN` and `LVN` levels are drawn on the chart but do not have their own tables.
 
 ---
 

@@ -9,8 +9,8 @@ const tileLast = document.getElementById('tile-last');
 const tileChange = document.getElementById('tile-change');
 const tileOhl = document.getElementById('tile-ohl');
 const tileRange = document.getElementById('tile-range');
-const tileVol = document.getElementById('tile-vol');
-const tileBars = document.getElementById('tile-bars');
+const tileProb = document.getElementById('tile-prob');
+const tileProbSub = document.getElementById('tile-prob-sub');
 const tileNear = document.getElementById('tile-near');
 const tileNearDist = document.getElementById('tile-near-dist');
 const tileVa = document.getElementById('tile-va');
@@ -98,6 +98,7 @@ function renderLevelTables() {
 
   for (const t of tables) {
     const g = t.dataset.group;
+    if (g === 'prob') continue; // handled separately by renderProbabilityPanel
     const rows = byGroup[g] || [];
     // Sort descending by price so higher levels appear on top.
     rows.sort((a, b) => b.price - a.price);
@@ -125,9 +126,7 @@ function updateTiles() {
   tileOhl.textContent = `${first.open.toFixed(2)} / ${hi.toFixed(2)} / ${lo.toFixed(2)}`;
   tileRange.textContent = `Range ${(hi - lo).toFixed(2)}`;
 
-  const vol = bars.reduce((s, b) => s + (b.volume || 0), 0);
-  tileVol.textContent = vol.toLocaleString();
-  tileBars.textContent = `${bars.length} bars`;
+  // Top Probability tile is driven by plan-stats SSE events, not bars.
 
   // Nearest level
   let nearest = null;
@@ -152,6 +151,8 @@ function updateTiles() {
     va.POC !== null ? `POC&nbsp;${va.POC.toFixed(2)}` : '',
     va.VAL !== null ? `VAL&nbsp;${va.VAL.toFixed(2)}` : '',
   ].filter(Boolean).join('<br>') || '—';
+
+  updateProbTile();
 }
 
 function setBars(newBars) {
@@ -193,6 +194,52 @@ function updateBar(b) {
 }
 
 function setLevels(levels) { allLevels = levels; drawLevels(); updateTiles(); }
+
+let planProbabilities = [];
+
+function setPlanStats(stats) {
+  planProbabilities = (stats && Array.isArray(stats.probabilities)) ? stats.probabilities : [];
+  renderProbabilityPanel();
+  updateProbTile();
+}
+
+function renderProbabilityPanel() {
+  const t = document.querySelector('#levels-grid table[data-group="prob"]');
+  if (!t) return;
+  const top = [...planProbabilities].sort((a, b) => b.pct - a.pct).slice(0, 6);
+  t.innerHTML = top.map((p) => {
+    const ref = (p.prices && p.prices.length) ? ` <span style="color:#8a7ca0">(${p.prices.map((x) => x.toFixed(2)).join(' / ')})</span>` : '';
+    return `<tr><td>${escapeHtml(p.label)}${ref}</td><td>${p.pct.toFixed(1)}%</td></tr>`;
+  }).join('') || '<tr><td colspan="2" style="color:#555">—</td></tr>';
+}
+
+function updateProbTile() {
+  if (!planProbabilities.length) {
+    tileProb.textContent = '—';
+    tileProbSub.textContent = 'no plan data';
+    return;
+  }
+  // Pick: highest-pct entry whose nearest reference price is within +/- 15 points
+  // of current price. Fallback: overall highest pct.
+  const BAND = 15;
+  let best = null;
+  if (lastClose !== null) {
+    for (const p of planProbabilities) {
+      if (!p.prices || !p.prices.length) continue;
+      const d = Math.min(...p.prices.map((x) => Math.abs(x - lastClose)));
+      if (d > BAND) continue;
+      if (!best || p.pct > best.p.pct) best = { p, d };
+    }
+  }
+  if (!best) {
+    const top = [...planProbabilities].sort((a, b) => b.pct - a.pct)[0];
+    tileProb.textContent = `${top.pct.toFixed(1)}%`;
+    tileProbSub.textContent = `${top.label} (no near ref)`;
+    return;
+  }
+  tileProb.textContent = `${best.p.pct.toFixed(1)}%`;
+  tileProbSub.textContent = `${best.p.label}  ±${best.d.toFixed(2)}`;
+}
 
 function updateLastBar(b) {
   lastBarEl.textContent = `${b.rawTime}  O ${b.open}  H ${b.high}  L ${b.low}  C ${b.close}  V ${b.volume}`;
@@ -238,12 +285,14 @@ function connect() {
     const data = JSON.parse(e.data);
     allLevels = data.levels;
     setBars(data.bars);
+    setPlanStats(data.planStats);
     statusEl.textContent = 'live';
     statusEl.className = 'ok';
   });
   es.addEventListener('bar', (e) => updateBar(JSON.parse(e.data)));
   es.addEventListener('levels', (e) => setLevels(JSON.parse(e.data)));
   es.addEventListener('plans', () => loadPlanList(planSelect.value));
+  es.addEventListener('plan-stats', (e) => setPlanStats(JSON.parse(e.data)));
   es.onerror = () => { statusEl.textContent = 'disconnected'; statusEl.className = 'err'; };
 }
 
