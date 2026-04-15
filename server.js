@@ -47,12 +47,14 @@ function loadSession() {
     const text = fs.readFileSync(SESSION_FILE, 'utf8').trim();
     if (!text) return;
     const lines = text.split(/\r?\n/);
+    let dropped = 0;
     for (const line of lines) {
       if (!line) continue;
       const parts = line.split(',');
-      if (parts.length < 7) continue;
+      if (parts.length < 7) { dropped++; continue; }
       const [rawTime, symbol, open, high, low, close, volume] = parts;
-      if (!/^\d{1,2}:\d{2}:\d{2}$/.test(rawTime)) continue;
+      if (!/^\d{1,2}:\d{2}:\d{2}$/.test(rawTime)) { dropped++; continue; }
+      if (+open <= 0 || +high <= 0 || +low <= 0 || +close <= 0) { dropped++; continue; }
       bars.push({
         time: rawTimeToEpoch(rawTime),
         symbol,
@@ -66,9 +68,10 @@ function loadSession() {
     }
     // Enforce strictly increasing time (restart after midnight can cause ties).
     bars.sort((a, b) => a.time - b.time);
-    pruneOld();
+    const pruned = pruneOld();
     if (bars.length) lastRawTime = bars[bars.length - 1].rawTime;
-    console.log(`Loaded ${bars.length} bars from session`);
+    if (dropped || pruned) rewriteSession();
+    console.log(`Loaded ${bars.length} bars from session${dropped ? ` (dropped ${dropped})` : ''}`);
   } catch (e) {
     console.error('Failed to load session:', e.message);
   }
@@ -119,6 +122,7 @@ function pollMinuteFile() {
     const [rawTime, symbol, open, high, low, close, volume] = parts;
     if (!/^\d{1,2}:\d{2}:\d{2}$/.test(rawTime)) return; // skip malformed/partial rows
     if (rawTime === lastRawTime) return;
+    if (+open <= 0 || +high <= 0 || +low <= 0 || +close <= 0) return; // skip placeholder rows with no price
 
     const bar = {
       time: rawTimeToEpoch(rawTime),
