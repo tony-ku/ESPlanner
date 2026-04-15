@@ -53,6 +53,7 @@ function loadSession() {
       if (parts.length < 7) continue;
       const [rawTime, symbol, open, high, low, close, volume] = parts;
       if (!/^\d{1,2}:\d{2}:\d{2}$/.test(rawTime)) continue;
+      if (+open <= 0 || +high <= 0 || +low <= 0 || +close <= 0) continue;
       bars.push({
         time: rawTimeToEpoch(rawTime),
         symbol,
@@ -119,6 +120,7 @@ function pollMinuteFile() {
     const [rawTime, symbol, open, high, low, close, volume] = parts;
     if (!/^\d{1,2}:\d{2}:\d{2}$/.test(rawTime)) return; // skip malformed/partial rows
     if (rawTime === lastRawTime) return;
+    if (+open <= 0 || +high <= 0 || +low <= 0 || +close <= 0) return; // skip placeholder rows with no price
 
     const bar = {
       time: rawTimeToEpoch(rawTime),
