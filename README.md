@@ -294,4 +294,14 @@ ESPlanner/
 
 ## License
 
-Personal use. Use at your own risk — this is a tool for viewing your own local files, not trading advice.
+Released under the [MIT License](LICENSE).
+
+---
+
+## Disclaimer
+
+**ESPlanner is a personal file-viewing utility, not trading advice, signal service, or investment recommendation.** Nothing in this repository — including the chart, levels, probability tiles, or rendered trading plans — should be interpreted as a recommendation to buy, sell, or hold any security, futures contract, or other financial instrument.
+
+Trading futures (including E-mini S&P 500 / ES contracts) involves **substantial risk of loss** and is not suitable for every investor. Leverage can work against you as well as for you. You can lose more than your initial deposit. Past performance of any trading methodology, plan, or level is not indicative of future results.
+
+The probability figures displayed by this tool are parsed verbatim from markdown files **you** provide; they carry no statistical validation from this software. The author makes no warranty as to the accuracy, completeness, or fitness for any purpose of any data shown. Use at your own risk. Consult a licensed financial professional before making any trading decision.
