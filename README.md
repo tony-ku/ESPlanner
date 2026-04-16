@@ -11,23 +11,9 @@ Everything runs locally — no cloud, no account, no data leaves your machine. A
 
 ---
 
-## Screenshot layout
+## Screenshot
 
-```
-┌──────────────────────────────────────────────────────────────────────┐
-│ ESPLANNER — ESM6                                          live       │
-├──────────────────────────────────────────────────────────────────────┤
-│ Last Price │ Session O/H/L │ Top Prob @Price │ Nearest Level │ VA    │
-├──────────────────────────────────────────────┬───────────────────────┤
-│                                              │                       │
-│              Candlestick chart               │    Trading Plan       │
-│           (with horizontal levels)           │    (today's .md)      │
-│                                              │                       │
-├─────────────────────┬─────────────┬──────────┴──────┬────────────────┤
-│  Top Probabilities  │  Intraday   │   Reference     │ Prior Day/Week │
-│   (from plan .md)   │             │                 │                │
-└─────────────────────┴─────────────┴─────────────────┴────────────────┘
-```
+![ESPlanner dashboard](opening_image.png)
 
 ---
 
