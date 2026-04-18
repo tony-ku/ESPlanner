@@ -216,6 +216,17 @@ select {
 .lv-group tr.near td:first-child { color: #ffd47a; }
 .lv-group tr.near td:last-child { color: #ffd47a; }
 
+/* ---------- Footer ---------- */
+#copyright {
+  padding: 10px 16px 14px;
+  text-align: center;
+  font-size: 11px;
+  color: #8a7ca0;
+  border-top: 1px solid #3a1f3a;
+  background: #120a1e;
+  letter-spacing: 0.06em;
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 1200px) {
   #tiles { grid-template-columns: repeat(3, 1fr); }
