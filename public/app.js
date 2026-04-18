@@ -85,6 +85,28 @@ const volumeSeries = chart.addHistogramSeries({
 });
 chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
 
+const ohlcTooltip = document.getElementById('ohlc-tooltip');
+chart.subscribeCrosshairMove((param) => {
+  if (!param || !param.time || !param.point || param.point.x < 0 || param.point.y < 0) {
+    ohlcTooltip.hidden = true;
+    return;
+  }
+  const candle = param.seriesData.get(candleSeries);
+  const vol = param.seriesData.get(volumeSeries);
+  if (!candle) { ohlcTooltip.hidden = true; return; }
+  const up = candle.close >= candle.open;
+  const cls = up ? 't-up' : 't-dn';
+  const volStr = vol ? vol.value.toLocaleString() : '—';
+  ohlcTooltip.innerHTML =
+    `<div class="t-time">${ctFormat(CT_HMS, param.time)} CT</div>` +
+    `<div class="t-row"><span class="t-lbl">O</span><span>${candle.open.toFixed(2)}</span>` +
+    `<span class="t-lbl">H</span><span>${candle.high.toFixed(2)}</span></div>` +
+    `<div class="t-row"><span class="t-lbl">L</span><span>${candle.low.toFixed(2)}</span>` +
+    `<span class="t-lbl">C</span><span class="${cls}">${candle.close.toFixed(2)}</span></div>` +
+    `<div class="t-row"><span class="t-lbl">V</span><span>${volStr}</span></div>`;
+  ohlcTooltip.hidden = false;
+});
+
 // ---------- State ----------
 let bars = [];
 let allLevels = [];
