@@ -5,6 +5,14 @@ const path = require('path');
 const chokidar = require('chokidar');
 const { parse } = require('csv-parse/sync');
 const { marked } = require('marked');
+const {
+  formatLocalDateTime,
+  parseLocalDateTime,
+  rawTimeToEpoch,
+  sanitizeColor,
+  extractProbabilities,
+  parseMinuteLine,
+} = require('./src/helpers');
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const MINUTE_FILE = process.env.MINUTE_FILE;
@@ -103,52 +111,15 @@ function pruneOld() {
   return bars.length !== before;
 }
 
-// Convert "HH:MM:SS" (from the live feed) to epoch seconds using today's date (local time).
-function rawTimeToEpoch(rawTime) {
-  const [h, m, s] = rawTime.split(':').map((n) => parseInt(n, 10));
-  const now = new Date();
-  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, s || 0);
-  // If the parsed time is more than 12h in the future vs now, assume it was yesterday.
-  if (d.getTime() - now.getTime() > 12 * 3600 * 1000) d.setDate(d.getDate() - 1);
-  return Math.floor(d.getTime() / 1000);
-}
-
-const pad2 = (n) => String(n).padStart(2, '0');
-
-function formatLocalDateTime(epoch) {
-  const d = new Date(epoch * 1000);
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
-}
-
-function parseLocalDateTime(s) {
-  const m = /^(\d{4})-(\d{2})-(\d{2}) (\d{1,2}):(\d{2}):(\d{2})$/.exec(s);
-  if (!m) return null;
-  const d = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
-  return Math.floor(d.getTime() / 1000);
-}
-
 function pollMinuteFile() {
   fs.readFile(MINUTE_FILE, 'utf8', (err, text) => {
     if (err) return; // file may be mid-write; try again next tick
     const line = text.trim().split(/\r?\n/).pop();
-    if (!line) return;
-    const parts = line.split(',');
-    if (parts.length < 7) return;
-    const [rawTime, symbol, open, high, low, close, volume] = parts;
-    if (!/^\d{1,2}:\d{2}:\d{2}$/.test(rawTime)) return; // skip malformed/partial rows
-    if (rawTime === lastRawTime) return;
-    if (+open <= 0 || +high <= 0 || +low <= 0 || +close <= 0) return; // skip placeholder rows with no price
+    const parsed = parseMinuteLine(line);
+    if (!parsed) return;
+    if (parsed.rawTime === lastRawTime) return;
 
-    const bar = {
-      time: rawTimeToEpoch(rawTime),
-      symbol,
-      open: +open,
-      high: +high,
-      low: +low,
-      close: +close,
-      volume: +volume,
-      rawTime,
-    };
+    const bar = { ...parsed, time: rawTimeToEpoch(parsed.rawTime) };
 
     // Lightweight Charts requires strictly increasing time. Replace if same second.
     if (bars.length && bars[bars.length - 1].time === bar.time) {
@@ -162,7 +133,7 @@ function pollMinuteFile() {
       appendSession(bar);
     }
 
-    lastRawTime = rawTime;
+    lastRawTime = parsed.rawTime;
     const pruned = pruneOld();
     if (pruned) rewriteSession();
     broadcast('bar', bar);
@@ -180,11 +151,6 @@ function loadLevels() {
   try {
     const text = fs.readFileSync(LEVELS_FILE, 'utf8');
     const rows = parse(text, { columns: true, skip_empty_lines: true, trim: true });
-    const sanitizeColor = (c, fallback) => {
-      if (typeof c !== 'string') return fallback;
-      const m = c.trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
-      return m ? `#${m[1]}` : fallback;
-    };
     levels = rows
       .map((r) => ({
         symbol: r['Symbol'],
@@ -208,52 +174,6 @@ function listPlans() {
     .filter((f) => f.toLowerCase().endsWith('.md'))
     .sort()
     .reverse();
-}
-
-// Scan a plan's markdown tables for rows like:
-//   | 1 | IBH or IBL | 98.1% | (465) | IBH 6861.50 / IBL 6826.50 |
-// Return every probability entry found, each with {label, pct, prices[]}.
-function extractProbabilities(md) {
-  const out = [];
-  const seen = new Set();
-  const lines = md.split(/\r?\n/);
-  for (const line of lines) {
-    if (!line.includes('|') || !line.includes('%')) continue;
-    const cells = line.split('|').map((c) => c.trim());
-    // Drop empty outer cells from leading/trailing |
-    if (cells.length && cells[0] === '') cells.shift();
-    if (cells.length && cells[cells.length - 1] === '') cells.pop();
-
-    let pctIdx = -1, pct = null;
-    for (let i = 0; i < cells.length; i++) {
-      const m = cells[i].match(/^(\d+(?:\.\d+)?)\s*%$/);
-      if (m) { pct = parseFloat(m[1]); pctIdx = i; break; }
-    }
-    if (pct === null || pctIdx <= 0) continue;
-
-    let label = null;
-    for (let j = pctIdx - 1; j >= 0; j--) {
-      const c = cells[j].replace(/`/g, '').trim();
-      if (c && !/^\d+$/.test(c)) { label = c; break; }
-    }
-    if (!label) continue;
-
-    // Any cells to the right may carry reference prices, e.g. "IBH 6861.50 / IBL 6826.50".
-    const prices = [];
-    for (let k = pctIdx + 1; k < cells.length; k++) {
-      const matches = cells[k].match(/\d{3,5}(?:\.\d+)?/g);
-      if (matches) for (const s of matches) {
-        const v = parseFloat(s);
-        if (Number.isFinite(v) && v > 100) prices.push(v);
-      }
-    }
-
-    const key = `${label}|${pct}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push({ label, pct, prices });
-  }
-  return out;
 }
 
 function planStatsFor(name) {

@@ -7,8 +7,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm install` — install dependencies (first run only).
 - `npm start` — run the Express server (`node server.js`) on `PORT` (default `3000`).
 - `start.bat` — Windows launcher: installs deps if missing, starts server, opens Chrome to `http://localhost:3000`.
+- `npm test` — runs the test suite via Node's built-in `node --test` (requires Node ≥ 20). Covers pure helpers in `src/helpers.js` plus an SSE integration smoke test that spawns the server against a temp directory.
 
-No test suite, linter, or build step is configured.
+No linter or build step is configured.
 
 ## Configuration
 
