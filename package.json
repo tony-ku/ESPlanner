@@ -4,7 +4,11 @@
   "description": "ESPlanner - local web app that renders ES futures minute bars with trade plans and price levels",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "dependencies": {
     "chokidar": "^3.6.0",
