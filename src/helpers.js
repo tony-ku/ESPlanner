@@ -95,7 +95,6 @@ function parseMinuteLine(line) {
 }
 
 module.exports = {
-  pad2,
   formatLocalDateTime,
   parseLocalDateTime,
   rawTimeToEpoch,
