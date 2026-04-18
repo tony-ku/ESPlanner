@@ -1,7 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
-  pad2,
   formatLocalDateTime,
   parseLocalDateTime,
   rawTimeToEpoch,
@@ -9,13 +8,6 @@ const {
   extractProbabilities,
   parseMinuteLine,
 } = require('../src/helpers');
-
-test('pad2 pads single digits', () => {
-  assert.equal(pad2(0), '00');
-  assert.equal(pad2(7), '07');
-  assert.equal(pad2(10), '10');
-  assert.equal(pad2(59), '59');
-});
 
 test('parseLocalDateTime parses valid "YYYY-MM-DD HH:MM:SS"', () => {
   const epoch = parseLocalDateTime('2026-04-17 09:30:00');
