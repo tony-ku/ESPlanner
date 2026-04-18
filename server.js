@@ -52,18 +52,19 @@ function loadSession() {
       if (!line) continue;
       const parts = line.split(',');
       if (parts.length < 7) { dropped++; continue; }
-      const [rawTime, symbol, open, high, low, close, volume] = parts;
-      if (!/^\d{1,2}:\d{2}:\d{2}$/.test(rawTime)) { dropped++; continue; }
+      const [dateTime, symbol, open, high, low, close, volume] = parts;
+      const epoch = parseLocalDateTime(dateTime);
+      if (epoch == null) { dropped++; continue; }
       if (+open <= 0 || +high <= 0 || +low <= 0 || +close <= 0) { dropped++; continue; }
       bars.push({
-        time: rawTimeToEpoch(rawTime),
+        time: epoch,
         symbol,
         open: +open,
         high: +high,
         low: +low,
         close: +close,
         volume: +volume,
-        rawTime,
+        rawTime: dateTime.slice(11), // "HH:MM:SS" for display
       });
     }
     // Enforce strictly increasing time (restart after midnight can cause ties).
@@ -78,7 +79,7 @@ function loadSession() {
 }
 
 function appendSession(bar) {
-  const line = `${bar.rawTime},${bar.symbol},${bar.open},${bar.high},${bar.low},${bar.close},${bar.volume}\n`;
+  const line = `${formatLocalDateTime(bar.time)},${bar.symbol},${bar.open},${bar.high},${bar.low},${bar.close},${bar.volume}\n`;
   fs.appendFile(SESSION_FILE, line, (err) => {
     if (err) console.error('Session append failed:', err.message);
   });
@@ -86,7 +87,7 @@ function appendSession(bar) {
 
 function rewriteSession() {
   const text = bars
-    .map((b) => `${b.rawTime},${b.symbol},${b.open},${b.high},${b.low},${b.close},${b.volume}`)
+    .map((b) => `${formatLocalDateTime(b.time)},${b.symbol},${b.open},${b.high},${b.low},${b.close},${b.volume}`)
     .join('\n');
   fs.writeFile(SESSION_FILE, text ? text + '\n' : '', (err) => {
     if (err) console.error('Session rewrite failed:', err.message);
@@ -102,13 +103,27 @@ function pruneOld() {
   return bars.length !== before;
 }
 
-// Convert "HH:MM:SS" to epoch seconds using today's date (local time).
+// Convert "HH:MM:SS" (from the live feed) to epoch seconds using today's date (local time).
 function rawTimeToEpoch(rawTime) {
   const [h, m, s] = rawTime.split(':').map((n) => parseInt(n, 10));
   const now = new Date();
   const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, s || 0);
   // If the parsed time is more than 12h in the future vs now, assume it was yesterday.
   if (d.getTime() - now.getTime() > 12 * 3600 * 1000) d.setDate(d.getDate() - 1);
+  return Math.floor(d.getTime() / 1000);
+}
+
+const pad2 = (n) => String(n).padStart(2, '0');
+
+function formatLocalDateTime(epoch) {
+  const d = new Date(epoch * 1000);
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+}
+
+function parseLocalDateTime(s) {
+  const m = /^(\d{4})-(\d{2})-(\d{2}) (\d{1,2}):(\d{2}):(\d{2})$/.exec(s);
+  if (!m) return null;
+  const d = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
   return Math.floor(d.getTime() / 1000);
 }
 
