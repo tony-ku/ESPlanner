@@ -107,6 +107,27 @@ main {
 #session-badge.session-on      { color: #c9a0ff; border-color: #9d7bff; box-shadow: 0 0 6px rgba(157,123,255,0.3); }
 #session-badge.session-closed  { color: #ff6b8a; border-color: #ff3b6b; }
 #session-badge.session-unknown { color: #8a7ca0; border-color: #4a2352; }
+#ohlc-tooltip {
+  position: absolute;
+  top: 38px;
+  left: 12px;
+  z-index: 5;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-family: ui-monospace, Consolas, monospace;
+  color: #e8d9ff;
+  background: rgba(26, 15, 42, 0.92);
+  border: 1px solid #4a2352;
+  border-radius: 3px;
+  pointer-events: none;
+  white-space: nowrap;
+  line-height: 1.5;
+}
+#ohlc-tooltip .t-time { color: #8a7ca0; font-weight: 700; letter-spacing: 0.08em; }
+#ohlc-tooltip .t-row { display: flex; gap: 10px; }
+#ohlc-tooltip .t-lbl { color: #8a7ca0; }
+#ohlc-tooltip .t-up { color: #7ee787; }
+#ohlc-tooltip .t-dn { color: #ff6b8a; }
 #last-bar {
   padding: 5px 12px;
   font-size: 11px;
