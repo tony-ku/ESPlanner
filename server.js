@@ -119,7 +119,8 @@ function pollMinuteFile() {
     if (!parsed) return;
     if (parsed.rawTime === lastRawTime) return;
 
-    const bar = { ...parsed, time: rawTimeToEpoch(parsed.rawTime) };
+    const { epoch, ...rest } = parsed;
+    const bar = { ...rest, time: epoch ?? rawTimeToEpoch(parsed.rawTime) };
 
     // Lightweight Charts requires strictly increasing time. Replace if same second.
     if (bars.length && bars[bars.length - 1].time === bar.time) {
