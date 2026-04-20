@@ -74,16 +74,28 @@ function extractProbabilities(md) {
 
 // Parse one row of the minute file. Returns a bar object or null for malformed /
 // incomplete rows (not enough columns, bad time format, non-positive prices).
-// Note: `time` (epoch seconds) is NOT set here — callers apply rawTimeToEpoch
-// so they can control the clock anchor.
+// Accepts either "HH:MM:SS" (legacy feed) or "YYYY-MM-DD HH:MM:SS". When a full
+// timestamp is given, `epoch` is set and callers should use it instead of
+// rawTimeToEpoch (no clock anchoring needed).
 function parseMinuteLine(line) {
   if (!line) return null;
   const parts = line.split(',');
   if (parts.length < 7) return null;
-  const [rawTime, symbol, open, high, low, close, volume] = parts;
-  if (!/^\d{1,2}:\d{2}:\d{2}$/.test(rawTime)) return null;
+  const [timeField, symbol, open, high, low, close, volume] = parts;
   if (+open <= 0 || +high <= 0 || +low <= 0 || +close <= 0) return null;
-  return {
+
+  let rawTime = null;
+  let epoch = null;
+  if (/^\d{1,2}:\d{2}:\d{2}$/.test(timeField)) {
+    rawTime = timeField;
+  } else {
+    const e = parseLocalDateTime(timeField);
+    if (e == null) return null;
+    epoch = e;
+    rawTime = timeField.slice(timeField.indexOf(' ') + 1); // "HH:MM:SS" for display
+  }
+
+  const out = {
     rawTime,
     symbol,
     open: +open,
@@ -92,6 +104,8 @@ function parseMinuteLine(line) {
     close: +close,
     volume: +volume,
   };
+  if (epoch != null) out.epoch = epoch;
+  return out;
 }
 
 module.exports = {

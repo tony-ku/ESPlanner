@@ -172,3 +172,27 @@ test('parseMinuteLine accepts single-digit hour in rawTime', () => {
   assert.ok(out);
   assert.equal(out.rawTime, '9:30:00');
 });
+
+test('parseMinuteLine accepts full "YYYY-MM-DD HH:MM:SS" timestamp and sets epoch', () => {
+  const out = parseMinuteLine('2026-04-19 22:38:39,ESM6,7121.25,7121.75,7121.25,7121.5,34');
+  assert.ok(out);
+  assert.equal(out.rawTime, '22:38:39');
+  assert.equal(out.symbol, 'ESM6');
+  assert.equal(out.close, 7121.5);
+  const d = new Date(out.epoch * 1000);
+  assert.equal(d.getFullYear(), 2026);
+  assert.equal(d.getMonth(), 3); // April
+  assert.equal(d.getDate(), 19);
+  assert.equal(d.getHours(), 22);
+  assert.equal(d.getMinutes(), 38);
+});
+
+test('parseMinuteLine omits epoch for legacy "HH:MM:SS" rows', () => {
+  const out = parseMinuteLine('15:14:03,ESM6,7002,7003,7002,7002.5,966');
+  assert.ok(out);
+  assert.equal('epoch' in out, false);
+});
+
+test('parseMinuteLine rejects a malformed full timestamp', () => {
+  assert.equal(parseMinuteLine('2026/04/19 22:38:39,ESM6,7002,7003,7002,7002.5,966'), null);
+});
