@@ -123,10 +123,10 @@ test('server ingests minute file, dedupes, emits SSE for bars and levels', async
 
   // 2) writing a bar row produces a 'bar' event with matching OHLCV
   const barsBefore = countOf('bar');
-  fs.writeFileSync(minuteFile, '15:14:03,ESM6,7002,7003,7002,7002.5,966\n');
+  fs.writeFileSync(minuteFile, '15:14:03,ESU6,7002,7003,7002,7002.5,966\n');
   await waitFor(() => countOf('bar') > barsBefore);
   const barEvt = JSON.parse(lastOf('bar').data);
-  assert.equal(barEvt.symbol, 'ESM6');
+  assert.equal(barEvt.symbol, 'ESU6');
   assert.equal(barEvt.open, 7002);
   assert.equal(barEvt.close, 7002.5);
   assert.equal(barEvt.volume, 966);
@@ -134,7 +134,7 @@ test('server ingests minute file, dedupes, emits SSE for bars and levels', async
 
   // 3) re-writing the same row does NOT produce another bar event
   const barsAfterFirst = countOf('bar');
-  fs.writeFileSync(minuteFile, '15:14:03,ESM6,7002,7003,7002,7002.5,966\n');
+  fs.writeFileSync(minuteFile, '15:14:03,ESU6,7002,7003,7002,7002.5,966\n');
   await new Promise((r) => setTimeout(r, 300)); // several poll cycles at POLL_MS=50
   assert.equal(countOf('bar'), barsAfterFirst, 'duplicate row should have been deduped');
 
@@ -142,7 +142,7 @@ test('server ingests minute file, dedupes, emits SSE for bars and levels', async
   const levelsBefore = countOf('levels');
   fs.writeFileSync(levelsFile,
     'Symbol,Price Level,Note,Foreground Color,Background Color\n' +
-    'ESM6,7010,VAH,#FFFFFF,#3b6b01\n');
+    'ESU6,7010,VAH,#FFFFFF,#3b6b01\n');
   // chokidar awaitWriteFinish stabilityThreshold is 200ms — give it margin.
   await waitFor(() => countOf('levels') > levelsBefore, 5000);
   const lvlEvt = JSON.parse(lastOf('levels').data);
