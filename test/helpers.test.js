@@ -136,10 +136,10 @@ test('extractProbabilities ignores non-table lines', () => {
 });
 
 test('parseMinuteLine returns bar object for valid row', () => {
-  const out = parseMinuteLine('15:14:03,ESM6,7002,7003,7002,7002.5,966');
+  const out = parseMinuteLine('15:14:03,ESU6,7002,7003,7002,7002.5,966');
   assert.deepEqual(out, {
     rawTime: '15:14:03',
-    symbol: 'ESM6',
+    symbol: 'ESU6',
     open: 7002,
     high: 7003,
     low: 7002,
@@ -149,35 +149,35 @@ test('parseMinuteLine returns bar object for valid row', () => {
 });
 
 test('parseMinuteLine rejects rows with <7 fields', () => {
-  assert.equal(parseMinuteLine('15:14:03,ESM6,7002,7003'), null);
+  assert.equal(parseMinuteLine('15:14:03,ESU6,7002,7003'), null);
   assert.equal(parseMinuteLine(''), null);
   assert.equal(parseMinuteLine(null), null);
 });
 
 test('parseMinuteLine rejects malformed rawTime', () => {
-  assert.equal(parseMinuteLine('not-a-time,ESM6,7002,7003,7002,7002.5,966'), null);
-  assert.equal(parseMinuteLine('25-14-03,ESM6,7002,7003,7002,7002.5,966'), null);
+  assert.equal(parseMinuteLine('not-a-time,ESU6,7002,7003,7002,7002.5,966'), null);
+  assert.equal(parseMinuteLine('25-14-03,ESU6,7002,7003,7002,7002.5,966'), null);
 });
 
 test('parseMinuteLine rejects rows with any non-positive OHLC price', () => {
-  assert.equal(parseMinuteLine('15:14:03,ESM6,0,7003,7002,7002.5,966'), null);
-  assert.equal(parseMinuteLine('15:14:03,ESM6,7002,0,7002,7002.5,966'), null);
-  assert.equal(parseMinuteLine('15:14:03,ESM6,7002,7003,0,7002.5,966'), null);
-  assert.equal(parseMinuteLine('15:14:03,ESM6,7002,7003,7002,0,966'), null);
-  assert.equal(parseMinuteLine('15:14:03,ESM6,-1,7003,7002,7002.5,966'), null);
+  assert.equal(parseMinuteLine('15:14:03,ESU6,0,7003,7002,7002.5,966'), null);
+  assert.equal(parseMinuteLine('15:14:03,ESU6,7002,0,7002,7002.5,966'), null);
+  assert.equal(parseMinuteLine('15:14:03,ESU6,7002,7003,0,7002.5,966'), null);
+  assert.equal(parseMinuteLine('15:14:03,ESU6,7002,7003,7002,0,966'), null);
+  assert.equal(parseMinuteLine('15:14:03,ESU6,-1,7003,7002,7002.5,966'), null);
 });
 
 test('parseMinuteLine accepts single-digit hour in rawTime', () => {
-  const out = parseMinuteLine('9:30:00,ESM6,7002,7003,7002,7002.5,966');
+  const out = parseMinuteLine('9:30:00,ESU6,7002,7003,7002,7002.5,966');
   assert.ok(out);
   assert.equal(out.rawTime, '9:30:00');
 });
 
 test('parseMinuteLine accepts full "YYYY-MM-DD HH:MM:SS" timestamp and sets epoch', () => {
-  const out = parseMinuteLine('2026-04-19 22:38:39,ESM6,7121.25,7121.75,7121.25,7121.5,34');
+  const out = parseMinuteLine('2026-04-19 22:38:39,ESU6,7121.25,7121.75,7121.25,7121.5,34');
   assert.ok(out);
   assert.equal(out.rawTime, '22:38:39');
-  assert.equal(out.symbol, 'ESM6');
+  assert.equal(out.symbol, 'ESU6');
   assert.equal(out.close, 7121.5);
   const d = new Date(out.epoch * 1000);
   assert.equal(d.getFullYear(), 2026);
@@ -188,11 +188,11 @@ test('parseMinuteLine accepts full "YYYY-MM-DD HH:MM:SS" timestamp and sets epoc
 });
 
 test('parseMinuteLine omits epoch for legacy "HH:MM:SS" rows', () => {
-  const out = parseMinuteLine('15:14:03,ESM6,7002,7003,7002,7002.5,966');
+  const out = parseMinuteLine('15:14:03,ESU6,7002,7003,7002,7002.5,966');
   assert.ok(out);
   assert.equal('epoch' in out, false);
 });
 
 test('parseMinuteLine rejects a malformed full timestamp', () => {
-  assert.equal(parseMinuteLine('2026/04/19 22:38:39,ESM6,7002,7003,7002,7002.5,966'), null);
+  assert.equal(parseMinuteLine('2026/04/19 22:38:39,ESU6,7002,7003,7002,7002.5,966'), null);
 });

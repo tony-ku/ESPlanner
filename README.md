@@ -86,7 +86,7 @@ Time,Symbol,Open,High,Low,Close,Volume
 Example row:
 
 ```
-15:14:03,ESM6,7002,7003,7002,7002.5,966
+15:14:03,ESU6,7002,7003,7002,7002.5,966
 ```
 
 The server polls this file every `POLL_MS`, deduplicates by `Time`, and appends each new bar to an in-memory history (and to `SESSION_FILE` on disk).
